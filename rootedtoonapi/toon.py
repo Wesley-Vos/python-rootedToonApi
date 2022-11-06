@@ -181,15 +181,8 @@ class Toon:
         self._status.thermostat.update_from_dict(data)
 
     async def set_hvac_mode(self, program_state):
-        query: Dict[str: str] = {
-            "state": program_state
-        }
-        data: Dict[str: Any] = {
-            "programState": program_state
-        }
-
-        if program_state == PROGRAM_STATE_OFF and self._status.thermostat.holiday_mode:
-            query["temperatureState"] = 1
+        query: Dict[str: str] = { "state": program_state }
+        data: Dict[str: Any] = { "programState": program_state }
 
         await self._request(
             device=THERMOSTAT_DEVICE,
@@ -197,63 +190,6 @@ class Toon:
             query=query
         )
         self._status.thermostat.update_from_dict(data)
-
-        # if (hvac_mode == HVAC_MODE_HEAT) and (self._active_state == 4):
-        #     _LOGGER.debug(
-        #         "%s: request 'changeSchemeState' with 'state' value %s "
-        #         "and 'temperatureState' value %s",
-        #         self._name, str(0), str(1),
-        #     )
-        #     self._data = await self.do_api_request(
-        #         self._name, self._session,
-        #         BASE_URL.format(
-        #             self._host, self._port,
-        #             "/happ_thermstat?action=changeSchemeState"
-        #             "&state=0"
-        #             "&temperatureState=1",
-        #         ),
-        #     )
-        # elif hvac_mode == HVAC_MODE_HEAT:
-        #     _LOGGER.debug(
-        #         "%s: request 'changeSchemeState' with 'state' value %s ",
-        #         self._name, str(0)
-        #     )
-        #     self._data = await self.do_api_request(
-        #         self._name, self._session,
-        #         BASE_URL.format(
-        #             self._host, self._port,
-        #             "/happ_thermstat?action=changeSchemeState"
-        #             "&state=0",
-        #         ),
-        #     )
-        # elif hvac_mode == HVAC_MODE_AUTO:
-        #     _LOGGER.debug(
-        #         "%s: request 'changeSchemeState' with 'state' value %s ",
-        #         self._name, str(1)
-        #     )
-        #     self._data = await self.do_api_request(
-        #         self._name, self._session,
-        #         BASE_URL.format(
-        #             self._host, self._port,
-        #             "/happ_thermstat?action=changeSchemeState"
-        #             "&state=1",
-        #         ),
-        #     )
-        # elif hvac_mode == HVAC_MODE_OFF:
-        #     _LOGGER.debug(
-        #         "%s: request 'changeSchemeState' with 'state' value %s "
-        #         "and 'temperatureState' value %s",
-        #         self._name, str(8), str(4),
-        #     )
-        #     self._data = await self.do_api_request(
-        #         self._name, self._session,
-        #         BASE_URL.format(
-        #             self._host, self._port,
-        #             "/happ_thermstat?action=changeSchemeState"
-        #             "&state=8"
-        #             "&temperatureState=4",
-        #         ),
-        #     )
 
     async def close(self) -> None:
         """Close open client session."""
