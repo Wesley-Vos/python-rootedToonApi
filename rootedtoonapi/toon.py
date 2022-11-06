@@ -140,15 +140,8 @@ class Toon:
 
     async def set_current_setpoint(self, temperature: float) -> None:
         """Set the target temperature for the thermostat."""
-        assert self._status
         query = {
             "Setpoint": round(temperature * 100),
-        }
-
-        data = {
-            "currentSetpoint": round(temperature * 100),
-            "programState": PROGRAM_STATE_OVERRIDE,
-            "activeState": ACTIVE_STATE_OFF,
         }
 
         await self._request(
@@ -156,17 +149,12 @@ class Toon:
             action="setSetpoint",
             query=query,
         )
-        self._status.thermostat.update_from_dict(data)
+        await self.update_climate()
 
     async def set_active_state(
         self, active_state: int, program_state: int = PROGRAM_STATE_OVERRIDE
     ) -> None:
-        """.."""
-        assert self._status
-        data = {
-            "programState": program_state,
-            "activeState": active_state
-        }
+        """Set the active state for the thermostat"""
         query = {
             "state": program_state,
             "temperatureState": active_state
@@ -177,18 +165,18 @@ class Toon:
             action="changeSchemeState",
             query=query
         )
-        self._status.thermostat.update_from_dict(data)
+        await self.update_climate()
 
     async def set_hvac_mode(self, program_state):
+        """Set the hvac mode for the thermostat"""
         query: Dict[str: str] = { "state": program_state }
-        data: Dict[str: Any] = { "programState": program_state }
 
         await self._request(
             device=THERMOSTAT_DEVICE,
             action="changeSchemeState",
             query=query
         )
-        self._status.thermostat.update_from_dict(data)
+        await self.update_climate()
 
     async def close(self) -> None:
         """Close open client session."""
