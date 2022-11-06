@@ -14,7 +14,10 @@ from yarl import URL
 from .__version__ import __version__
 from .const import (
     ACTIVE_STATE_OFF,
+    PROGRAM_STATE_OFF,
+    PROGRAM_STATE_ON,
     PROGRAM_STATE_OVERRIDE,
+    THERMOSTAT_DEVICE,
     TOON_API_BASE_PATH,
     TOON_API_SCHEME,
 )
@@ -130,7 +133,7 @@ class Toon:
         assert self._status
         if data is None:
             data = await self._request(
-                device="happ_thermstat",
+                device=THERMOSTAT_DEVICE,
                 action="getThermostatInfo"
             )
         self._status.thermostat.update_from_dict(data)
@@ -150,7 +153,7 @@ class Toon:
         }
 
         await self._request(
-            device="happ_thermstat",
+            device=THERMOSTAT_DEVICE,
             action="setSetpoint",
             query=query,
         )
@@ -171,11 +174,86 @@ class Toon:
         }
 
         await self._request(
-            device="happ_thermstat",
+            device=THERMOSTAT_DEVICE,
             action="changeSchemeState",
             query=query
         )
         self._status.thermostat.update_from_dict(data)
+
+    async def set_hvac_mode(self, program_state):
+        query: Dict[str: str] = {
+            "state": program_state
+        }
+        data: Dict[str: Any] = {
+            "programState": program_state
+        }
+
+        if program_state == PROGRAM_STATE_OFF and self._status.thermostat.holiday_mode:
+            query["temperatureState"] = 1
+
+        await self._request(
+            device=THERMOSTAT_DEVICE,
+            action="changeSchemeState",
+            query=query
+        )
+        self._status.thermostat.update_from_dict(data)
+
+        # if (hvac_mode == HVAC_MODE_HEAT) and (self._active_state == 4):
+        #     _LOGGER.debug(
+        #         "%s: request 'changeSchemeState' with 'state' value %s "
+        #         "and 'temperatureState' value %s",
+        #         self._name, str(0), str(1),
+        #     )
+        #     self._data = await self.do_api_request(
+        #         self._name, self._session,
+        #         BASE_URL.format(
+        #             self._host, self._port,
+        #             "/happ_thermstat?action=changeSchemeState"
+        #             "&state=0"
+        #             "&temperatureState=1",
+        #         ),
+        #     )
+        # elif hvac_mode == HVAC_MODE_HEAT:
+        #     _LOGGER.debug(
+        #         "%s: request 'changeSchemeState' with 'state' value %s ",
+        #         self._name, str(0)
+        #     )
+        #     self._data = await self.do_api_request(
+        #         self._name, self._session,
+        #         BASE_URL.format(
+        #             self._host, self._port,
+        #             "/happ_thermstat?action=changeSchemeState"
+        #             "&state=0",
+        #         ),
+        #     )
+        # elif hvac_mode == HVAC_MODE_AUTO:
+        #     _LOGGER.debug(
+        #         "%s: request 'changeSchemeState' with 'state' value %s ",
+        #         self._name, str(1)
+        #     )
+        #     self._data = await self.do_api_request(
+        #         self._name, self._session,
+        #         BASE_URL.format(
+        #             self._host, self._port,
+        #             "/happ_thermstat?action=changeSchemeState"
+        #             "&state=1",
+        #         ),
+        #     )
+        # elif hvac_mode == HVAC_MODE_OFF:
+        #     _LOGGER.debug(
+        #         "%s: request 'changeSchemeState' with 'state' value %s "
+        #         "and 'temperatureState' value %s",
+        #         self._name, str(8), str(4),
+        #     )
+        #     self._data = await self.do_api_request(
+        #         self._name, self._session,
+        #         BASE_URL.format(
+        #             self._host, self._port,
+        #             "/happ_thermstat?action=changeSchemeState"
+        #             "&state=8"
+        #             "&temperatureState=4",
+        #         ),
+        #     )
 
     async def close(self) -> None:
         """Close open client session."""
