@@ -81,7 +81,6 @@ class Toon:
             path=path,
             query=query
         )
-        print(url)
 
         headers = {
             "Accept": "application/json",
