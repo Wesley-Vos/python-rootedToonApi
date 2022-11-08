@@ -123,14 +123,6 @@ class Toon:
             return await response.json(content_type="text/javascript")
         return await response.text()
 
-    async def determine_devices(self):
-        devices_data = await self._request(
-            device=ENERGY_DEVICE,
-            action="getDevices.json"
-        )
-        self._status.gas_usage.determine_device(devices_data)
-        self._status.power_usage.determine_devices(devices_data)
-
     async def update_energy_meter(self, data: Dict[str, Any] = None) -> Optional[Status]:
         assert self._status
         if data is None:
@@ -138,6 +130,12 @@ class Toon:
                 device=ENERGY_DEVICE,
                 action="getDevices.json"
             )
+
+        if not self._status.devices_set:
+            self._status.gas_usage.determine_device(data)
+            self._status.power_usage.determine_devices(data)
+            self._status.devices_set = True
+
         self._status.gas_usage.update_from_dict(data)
         self._status.power_usage.update_from_dict(data)
         return self._status
@@ -200,7 +198,6 @@ class Toon:
 
     async def __aenter__(self) -> Toon:
         """Async enter."""
-        await self.determine_devices()
         return self
 
     async def __aexit__(self, *exc_info) -> None:

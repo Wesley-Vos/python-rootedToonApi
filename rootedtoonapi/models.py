@@ -326,6 +326,7 @@ class Status:
     thermostat: ThermostatInfo = ThermostatInfo()
     power_usage: PowerUsage = PowerUsage()
     gas_usage: GasUsage = GasUsage()
+    devices_set = False
 
     last_updated_from_display: Optional[datetime] = None
     last_updated: datetime = datetime.utcnow()
