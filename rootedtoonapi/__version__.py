@@ -1,3 +1,3 @@
-"""Asynchronous Python client for the rooted Quby ToonAPI."""
+"""Asynchronous Python client for a rooted Toon."""
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"

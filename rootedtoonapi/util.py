@@ -31,14 +31,14 @@ def convert_datetime(timestamp: str) -> datetime:
     )
 
 
-def convert_kwh(value: int) -> Optional[float]:
+def convert_kwh(value: str) -> Optional[float]:
     """Convert a Wh value from the ToonAPI to a kWH value."""
     if value is None:
         return None
     return round(float(value) / 1000.0, 2)
 
 
-def convert_cm3(value: int) -> Optional[float]:
+def convert_cm3(value: str) -> Optional[float]:
     """Convert a value from the ToonAPI to a CM3 value."""
     if value is None:
         return None

@@ -4,18 +4,15 @@ from __future__ import annotations
 import asyncio
 import json
 import socket
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import aiohttp
 import async_timeout
 import backoff
 from yarl import URL
 
-from .__version__ import __version__
 from .const import (
-    ACTIVE_STATE_OFF,
-    PROGRAM_STATE_OFF,
-    PROGRAM_STATE_ON,
+    ENERGY_DEVICE,
     PROGRAM_STATE_OVERRIDE,
     THERMOSTAT_DEVICE,
     TOON_API_BASE_PATH,
@@ -37,12 +34,12 @@ class Toon:
     _close_session: bool = False
 
     def __init__(
-        self,
-        host: str,
-        *,
-        port: int = 80,
-        request_timeout: int = 10,
-        session: Optional[aiohttp.client.ClientSession] = None,
+            self,
+            host: str,
+            *,
+            port: int = 80,
+            request_timeout: int = 10,
+            session: Optional[aiohttp.client.ClientSession] = None,
     ) -> None:
         """Initialize connection with the Quby ToonAPI."""
         self._session = session
@@ -59,7 +56,6 @@ class Toon:
     )
     async def _request(
         self,
-        # uri: str = "",
         device: str,
         action: str,
         *,
@@ -127,6 +123,25 @@ class Toon:
             return await response.json(content_type="text/javascript")
         return await response.text()
 
+    async def determine_devices(self):
+        devices_data = await self._request(
+            device=ENERGY_DEVICE,
+            action="getDevices.json"
+        )
+        self._status.gas_usage.determine_device(devices_data)
+        self._status.power_usage.determine_devices(devices_data)
+
+    async def update_energy_meter(self, data: Dict[str, Any] = None) -> Optional[Status]:
+        assert self._status
+        if data is None:
+            data = await self._request(
+                device=ENERGY_DEVICE,
+                action="getDevices.json"
+            )
+        self._status.gas_usage.update_from_dict(data)
+        self._status.power_usage.update_from_dict(data)
+        return self._status
+
     async def update_climate(self, data: Dict[str, Any] = None) -> Optional[Status]:
         """Get all information in a single call."""
         assert self._status
@@ -152,7 +167,7 @@ class Toon:
         await self.update_climate()
 
     async def set_active_state(
-        self, active_state: int, program_state: int = PROGRAM_STATE_OVERRIDE
+            self, active_state: int, program_state: int = PROGRAM_STATE_OVERRIDE
     ) -> None:
         """Set the active state for the thermostat"""
         query = {
@@ -185,6 +200,7 @@ class Toon:
 
     async def __aenter__(self) -> Toon:
         """Async enter."""
+        await self.determine_devices()
         return self
 
     async def __aexit__(self, *exc_info) -> None:

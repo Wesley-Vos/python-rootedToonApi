@@ -1,7 +1,7 @@
 """Models for the rooted Toon."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Dict, Optional
 
@@ -10,6 +10,11 @@ from .const import (
     BURNER_STATE_ON,
     BURNER_STATE_PREHEATING,
     BURNER_STATE_TAP_WATER,
+    DEVICES,
+    KEY_FLOW_GAS,
+    KEY_FLOW_ELECTRICITY,
+    KEY_QUANTITY_GAS,
+    KEY_QUANTITY_ELECTRICITY,
     PROGRAM_STATE_ON,
     PROGRAM_STATE_OVERRIDE,
 )
@@ -218,150 +223,109 @@ class ThermostatInfo:
         # self.last_updated = datetime.utcnow()
 
 
-#
-# @dataclass
-# class PowerUsage:
-#     """Object holding Toon power usage information."""
-#
-#     average_produced: Optional[float] = None
-#     average_solar: Optional[float] = None
-#     average: Optional[float] = None
-#     current_produced: Optional[int] = None
-#     current_solar: Optional[int] = None
-#     current: Optional[int] = None
-#     day_average: Optional[float] = None
-#     day_cost: Optional[float] = None
-#     day_high_usage: Optional[float] = None
-#     day_low_usage: Optional[float] = None
-#     day_max_solar: Optional[int] = None
-#     day_produced_solar: Optional[float] = None
-#     is_smart: Optional[bool] = None
-#     meter_high: Optional[float] = None
-#     meter_low: Optional[float] = None
-#     meter_produced_high: Optional[float] = None
-#     meter_produced_low: Optional[float] = None
-#
-#     last_updated_from_display: Optional[datetime] = None
-#     last_updated: datetime = datetime.utcnow()
-#
-#     @property
-#     def day_usage(self) -> Optional[float]:
-#         """Calculate day total usage."""
-#         if self.day_high_usage is None or self.day_low_usage is None:
-#             return None
-#         return round(self.day_high_usage + self.day_low_usage, 2)
-#
-#     @property
-#     def day_to_grid_usage(self) -> Optional[float]:
-#         """Calculate day total to grid."""
-#         if self.day_usage is None or self.day_produced_solar is None:
-#             return None
-#         return abs(min(0.0, round(self.day_usage - self.day_produced_solar, 2)))
-#
-#     @property
-#     def day_from_grid_usage(self) -> Optional[float]:
-#         """Calculate day total to grid."""
-#         if self.day_produced_solar is None or self.day_usage is None:
-#             return None
-#         return abs(min(0.0, round(self.day_produced_solar - self.day_usage, 2)))
-#
-#     @property
-#     def current_covered_by_solar(self) -> Optional[int]:
-#         """Calculate current solar covering current usage."""
-#         if self.current_solar is None or self.current is None:
-#             return None
-#         return min(100, round((self.current_solar / self.current) * 100))
-#
-#     def update_from_dict(self, data: Dict[str, Any]) -> None:
-#         """Update this PowerUsage object with data from a dictionary."""
-#         self.average = process_data(data, "avgValue", self.average)
-#         self.average_produced = process_data(
-#             data, "avgProduValue", self.average_produced
-#         )
-#         self.average_solar = process_data(data, "avgSolarValue", self.average_solar)
-#         self.current = process_data(data, "value", self.current, round)
-#         self.current_produced = process_data(
-#             data, "valueProduced", self.current_produced, round
-#         )
-#         self.current_solar = process_data(data, "valueSolar", self.current_solar, round)
-#         self.day_average = process_data(
-#             data, "avgDayValue", self.day_average, convert_kwh
-#         )
-#         self.day_cost = process_data(data, "dayCost", self.day_cost)
-#         self.day_high_usage = process_data(
-#             data, "dayUsage", self.day_high_usage, convert_kwh
-#         )
-#         self.day_low_usage = process_data(
-#             data, "dayLowUsage", self.day_low_usage, convert_kwh
-#         )
-#         self.day_max_solar = process_data(data, "maxSolar", self.day_max_solar)
-#         self.day_produced_solar = process_data(
-#             data, "solarProducedToday", self.day_produced_solar, convert_kwh
-#         )
-#         self.is_smart = process_data(data, "isSmart", self.is_smart, convert_boolean)
-#         self.meter_high = process_data(
-#             data, "meterReading", self.meter_high, convert_kwh
-#         )
-#         self.meter_low = process_data(
-#             data, "meterReadingLow", self.meter_low, convert_kwh
-#         )
-#         self.meter_produced_high = process_data(
-#             data, "meterReadingProdu", self.meter_high, convert_kwh
-#         )
-#         self.meter_produced_low = process_data(
-#             data, "meterReadingLowProdu", self.meter_produced_low, convert_kwh
-#         )
-#
-#         self.last_updated_from_display = process_data(
-#             data,
-#             "lastUpdatedFromDisplay",
-#             self.last_updated_from_display,
-#             convert_datetime,
-#         )
-#         self.last_updated = datetime.utcnow()
-#
-#
-# @dataclass
-# class GasUsage:
-#     """Object holding Toon gas usage information."""
-#
-#     average: Optional[float] = None
-#     current: Optional[float] = None
-#     day_average: Optional[float] = None
-#     day_cost: Optional[float] = None
-#     day_usage: Optional[float] = None
-#     is_smart: Optional[bool] = None
-#     meter: Optional[float] = None
-#
-#     last_updated_from_display: Optional[datetime] = None
-#     last_updated: datetime = datetime.utcnow()
-#
-#     def update_from_dict(self, data: Dict[str, Any]) -> None:
-#         """Update this GasUsage object with data from a dictionary."""
-#         self.average = process_data(data, "avgValue", self.average, convert_cm3)
-#         self.current = process_data(data, "value", self.current, convert_cm3)
-#         self.day_average = process_data(
-#             data, "avgDayValue", self.day_average, convert_cm3
-#         )
-#         self.day_cost = process_data(data, "dayCost", self.day_cost)
-#         self.day_usage = process_data(data, "dayUsage", self.day_usage, convert_cm3)
-#         self.is_smart = process_data(data, "isSmart", self.is_smart, convert_boolean)
-#         self.meter = process_data(data, "meterReading", self.meter, convert_cm3)
-#
-#         self.last_updated_from_display = process_data(
-#             data,
-#             "lastUpdatedFromDisplay",
-#             self.last_updated_from_display,
-#             convert_datetime,
-#         )
-#         self.last_update = datetime.utcnow()
+@dataclass
+class PowerUsage:
+    """Object holding Toon power usage information."""
+
+    _device_ids: Optional[Dict[str, str]] = field(default_factory=dict)
+    _device_names = [
+        "electricity_usage_low_tarrif",
+        "electricity_usage_high_tarrif",
+        "electricity_production_low_tarrif",
+        "electricity_production_high_tarrif"
+    ]
+    _key_quantity = KEY_QUANTITY_ELECTRICITY
+    _key_flow = KEY_FLOW_ELECTRICITY
+
+    electricity_usage_low_tarrif: Optional[float] = None
+    electricity_used_low_tarrif: Optional[float] = None
+    electricity_usage_high_tarrif: Optional[float] = None
+    electricity_used_high_tarrif: Optional[float] = None
+    electricity_produced_low_tarrif: Optional[float] = None
+    electricity_production_low_tarrif: Optional[float] = None
+    electricity_produced_high_tarrif: Optional[float] = None
+    electricity_production_high_tarrif: Optional[float] = None
+
+    def determine_devices(self, devices_data):
+        for device_id, device in devices_data.items():
+            for device_name in self._device_names:
+                print(device_name)
+                device_types = DEVICES.get(device_name)
+                if device.get("type") in device_types:
+                    if device[self._key_quantity] != "NaN":
+                        self._device_ids[device_name] = device_id
+
+    # @property
+    # def day_usage(self) -> Optional[float]:
+    #     """Calculate day total usage."""
+    #     if self.day_high_usage is None or self.day_low_usage is None:
+    #         return None
+    #     return round(self.day_high_usage + self.day_low_usage, 2)
+    #
+    # @property
+    # def day_to_grid_usage(self) -> Optional[float]:
+    #     """Calculate day total to grid."""
+    #     if self.day_usage is None or self.day_produced_solar is None:
+    #         return None
+    #     return abs(min(0.0, round(self.day_usage - self.day_produced_solar, 2)))
+    #
+    # @property
+    # def day_from_grid_usage(self) -> Optional[float]:
+    #     """Calculate day total to grid."""
+    #     if self.day_produced_solar is None or self.day_usage is None:
+    #         return None
+    #     return abs(min(0.0, round(self.day_produced_solar - self.day_usage, 2)))
+    #
+    # @property
+    # def current_covered_by_solar(self) -> Optional[int]:
+    #     """Calculate current solar covering current usage."""
+    #     if self.current_solar is None or self.current is None:
+    #         return None
+    #     return min(100, round((self.current_solar / self.current) * 100))
+
+    def update_from_dict(self, data: Dict[str, Any]) -> None:
+        """Update this PowerUsage object with data from a dictionary."""
+
+        for device_name, device_id in self._device_ids.items():
+            value = process_data(data[device_id], self._key_flow, getattr(self, device_name), lambda x: int(float(x)))
+            setattr(self, device_name, value)
+
+            name = device_name.replace("usage", "used").replace("production", "produced")
+            value = process_data(data[device_id], self._key_quantity, getattr(self, name), convert_kwh)
+            setattr(self, name, value)
+
+
+@dataclass
+class GasUsage:
+    """Object holding Toon gas usage information."""
+    _device_id: Optional[str] = None
+    _device_name = "gas"
+    _key_quantity = KEY_QUANTITY_GAS
+    _key_flow = KEY_FLOW_GAS
+
+    last_hour: Optional[float] = None
+    total: Optional[float] = None
+
+    def determine_device(self, devices_data):
+        for device_id, device in devices_data.items():
+            if device.get("type") in DEVICES[self._device_name]:
+                if device[self._key_quantity] != "NaN":
+                    self._device_id = device_id
+
+    def update_from_dict(self, data: Dict[str, Any]) -> None:
+        """Update this GasUsage object with data from a dictionary."""
+        data = data.get(self._device_id)
+
+        self.last_hour = process_data(data, self._key_flow, self.last_hour, convert_cm3)
+        self.total = process_data(data, self._key_quantity, self.total, convert_cm3)
+
 
 class Status:
     """Object holding all status information for this ToonAPI instance."""
 
     thermostat: ThermostatInfo = ThermostatInfo()
-    # power_usage: PowerUsage = PowerUsage()
-    # gas_usage: GasUsage = GasUsage()
+    power_usage: PowerUsage = PowerUsage()
+    gas_usage: GasUsage = GasUsage()
 
     last_updated_from_display: Optional[datetime] = None
     last_updated: datetime = datetime.utcnow()
