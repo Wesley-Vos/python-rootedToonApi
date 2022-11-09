@@ -16,5 +16,5 @@ from .const import (  # noqa
     PROGRAM_STATE_ON,
     PROGRAM_STATE_OVERRIDE,
 )
-from .models import Status  # noqa
+from .models import Devices  # noqa
 from .toon import Toon, ToonConnectionError, ToonError  # noqa

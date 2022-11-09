@@ -24,13 +24,13 @@ from .exceptions import (
     ToonError,
     ToonRateLimitError,
 )
-from .models import Status
+from .models import Devices
 
 
 class Toon:
     """Main class for handling connections with the Quby ToonAPI."""
 
-    _status: Optional[Status] = None
+    _devices: Optional[Devices] = None
     _close_session: bool = False
 
     def __init__(
@@ -48,7 +48,7 @@ class Toon:
         self.host = host
         self.port = port
 
-        self._status = Status()
+        self._devices = Devices()
 
     @backoff.on_exception(backoff.expo, ToonConnectionError, max_tries=3, logger=None)
     @backoff.on_exception(
@@ -123,33 +123,33 @@ class Toon:
             return await response.json(content_type="text/javascript")
         return await response.text()
 
-    async def update_energy_meter(self, data: Dict[str, Any] = None) -> Optional[Status]:
-        assert self._status
+    async def update_energy_meter(self, data: Dict[str, Any] = None) -> Optional[Devices]:
+        assert self._devices
         if data is None:
             data = await self._request(
                 device=ENERGY_DEVICE,
                 action="getDevices.json"
             )
 
-        if not self._status.devices_set:
-            self._status.gas_usage.determine_device(data)
-            self._status.power_usage.determine_devices(data)
-            self._status.devices_set = True
+        if not self._devices.devices_discovered:
+            self._devices.gas_meter.determine_device(data)
+            self._devices.electricity_meter.determine_devices(data)
+            self._devices.devices_discovered = True
 
-        self._status.gas_usage.update_from_dict(data)
-        self._status.power_usage.update_from_dict(data)
-        return self._status
+        self._devices.gas_meter.update_from_dict(data)
+        self._devices.electricity_meter.update_from_dict(data)
+        return self._devices
 
-    async def update_climate(self, data: Dict[str, Any] = None) -> Optional[Status]:
+    async def update_climate(self, data: Dict[str, Any] = None) -> Optional[Devices]:
         """Get all information in a single call."""
-        assert self._status
+        assert self._devices
         if data is None:
             data = await self._request(
                 device=THERMOSTAT_DEVICE,
                 action="getThermostatInfo"
             )
-        self._status.thermostat.update_from_dict(data)
-        return self._status
+        self._devices.thermostat.update_from_dict(data)
+        return self._devices
 
     async def set_current_setpoint(self, temperature: float) -> None:
         """Set the target temperature for the thermostat."""

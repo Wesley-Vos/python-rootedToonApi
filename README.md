@@ -36,10 +36,10 @@ from rootedtoonapi import Toon
 async def main():
     """Show example on using the ToonAPI."""
     async with Toon(host="put-in-host-here") as toon:
-        status = await toon.update()
-        print(status.gas_usage)
+        status = await toon.update_climate()
+        print(status.gas_meter)
         print(status.thermostat)
-        print(status.power_usage)
+        print(status.electricity_meter)
 
 
 if __name__ == "__main__":

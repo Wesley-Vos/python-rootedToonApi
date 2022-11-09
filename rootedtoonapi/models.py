@@ -48,7 +48,7 @@ def process_data(
 
 
 @dataclass
-class ThermostatInfo:
+class Thermostat:
     """Object holding Toon thermostat information."""
 
     active_state: Optional[int] = None
@@ -69,10 +69,6 @@ class ThermostatInfo:
     opentherm_communication_error: Optional[bool] = None
     program_state: Optional[int] = None
     real_setpoint: Optional[float] = None
-    set_by_load_shifthing: Optional[int] = None
-
-    last_updated_from_display: Optional[datetime] = None
-    last_updated: datetime = datetime.utcnow()
 
     @property
     def burner(self) -> Optional[bool]:
@@ -90,14 +86,14 @@ class ThermostatInfo:
 
     @property
     def heating(self) -> Optional[bool]:
-        """Return if burner is pre heating based on its state."""
+        """Return if burner is pre-heating based on its state."""
         if self.burner_state is None:
             return None
         return self.burner_state == BURNER_STATE_ON
 
     @property
     def pre_heating(self) -> Optional[bool]:
-        """Return if burner is pre heating based on its state."""
+        """Return if burner is pre-heating based on its state."""
         if self.burner_state is None:
             return None
         return self.burner_state == BURNER_STATE_PREHEATING
@@ -111,7 +107,7 @@ class ThermostatInfo:
 
     @property
     def program_overridden(self) -> Optional[bool]:
-        """Return if program mode is overriden."""
+        """Return if program mode is overridden."""
         if self.program_state is None:
             return None
         return self.program_state == PROGRAM_STATE_OVERRIDE
@@ -210,41 +206,30 @@ class ThermostatInfo:
         # self.real_setpoint = process_data(
         #     data, "realSetpoint", self.real_setpoint, convert_temperature
         # )
-        # self.set_by_load_shifthing = process_data(
-        #     data, "setByLoadShifting", self.set_by_load_shifthing, convert_boolean
-        # )
-        #
-        # self.last_updated_from_display = process_data(
-        #     data,
-        #     "lastUpdatedFromDisplay",
-        #     self.last_updated_from_display,
-        #     convert_datetime,
-        # )
-        # self.last_updated = datetime.utcnow()
 
 
 @dataclass
-class PowerUsage:
+class ElectricityMeter:
     """Object holding Toon power usage information."""
 
     _device_ids: Optional[Dict[str, str]] = field(default_factory=dict)
     _device_names = [
-        "electricity_usage_low_tarrif",
-        "electricity_usage_high_tarrif",
-        "electricity_production_low_tarrif",
-        "electricity_production_high_tarrif"
+        "electricity_delivery_low",
+        "electricity_delivery_high",
+        "electricity_return_low",
+        "electricity_return_high"
     ]
     _key_quantity = KEY_QUANTITY_ELECTRICITY
     _key_flow = KEY_FLOW_ELECTRICITY
 
-    electricity_usage_low_tarrif: Optional[float] = None
-    electricity_used_low_tarrif: Optional[float] = None
-    electricity_usage_high_tarrif: Optional[float] = None
-    electricity_used_high_tarrif: Optional[float] = None
-    electricity_produced_low_tarrif: Optional[float] = None
-    electricity_production_low_tarrif: Optional[float] = None
-    electricity_produced_high_tarrif: Optional[float] = None
-    electricity_production_high_tarrif: Optional[float] = None
+    electricity_delivery_low: Optional[float] = None
+    electricity_delivered_low: Optional[float] = None
+    electricity_delivery_high: Optional[float] = None
+    electricity_delivered_high: Optional[float] = None
+    electricity_returned_low: Optional[float] = None
+    electricity_return_low: Optional[float] = None
+    electricity_returned_high: Optional[float] = None
+    electricity_return_high: Optional[float] = None
 
     def determine_devices(self, devices_data):
         for device_id, device in devices_data.items():
@@ -255,33 +240,17 @@ class PowerUsage:
                     if device[self._key_quantity] != "NaN":
                         self._device_ids[device_name] = device_id
 
-    # @property
-    # def day_usage(self) -> Optional[float]:
-    #     """Calculate day total usage."""
-    #     if self.day_high_usage is None or self.day_low_usage is None:
-    #         return None
-    #     return round(self.day_high_usage + self.day_low_usage, 2)
-    #
-    # @property
-    # def day_to_grid_usage(self) -> Optional[float]:
-    #     """Calculate day total to grid."""
-    #     if self.day_usage is None or self.day_produced_solar is None:
-    #         return None
-    #     return abs(min(0.0, round(self.day_usage - self.day_produced_solar, 2)))
-    #
-    # @property
-    # def day_from_grid_usage(self) -> Optional[float]:
-    #     """Calculate day total to grid."""
-    #     if self.day_produced_solar is None or self.day_usage is None:
-    #         return None
-    #     return abs(min(0.0, round(self.day_produced_solar - self.day_usage, 2)))
-    #
-    # @property
-    # def current_covered_by_solar(self) -> Optional[int]:
-    #     """Calculate current solar covering current usage."""
-    #     if self.current_solar is None or self.current is None:
-    #         return None
-    #     return min(100, round((self.current_solar / self.current) * 100))
+    @property
+    def electricity_return(self) -> Optional[float]:
+        if self.electricity_return_low is None or self.electricity_return_high is None:
+            return None
+        return self.electricity_return_low + self.electricity_return_high
+
+    @property
+    def electricity_delivery(self) -> Optional[float]:
+        if self.electricity_delivery_low is None or self.electricity_delivery_high is None:
+            return None
+        return self.electricity_delivery_low + self.electricity_delivery_high
 
     def update_from_dict(self, data: Dict[str, Any]) -> None:
         """Update this PowerUsage object with data from a dictionary."""
@@ -290,13 +259,13 @@ class PowerUsage:
             value = process_data(data[device_id], self._key_flow, getattr(self, device_name), lambda x: int(float(x)))
             setattr(self, device_name, value)
 
-            name = device_name.replace("usage", "used").replace("production", "produced")
+            name = device_name.replace("delivery", "delivered").replace("return", "returned")
             value = process_data(data[device_id], self._key_quantity, getattr(self, name), convert_kwh)
             setattr(self, name, value)
 
 
 @dataclass
-class GasUsage:
+class GasMeter:
     """Object holding Toon gas usage information."""
     _device_id: Optional[str] = None
     _device_name = "gas"
@@ -320,35 +289,13 @@ class GasUsage:
         self.total = process_data(data, self._key_quantity, self.total, convert_cm3)
 
 
-class Status:
+class Devices:
     """Object holding all status information for this ToonAPI instance."""
 
-    thermostat: ThermostatInfo = ThermostatInfo()
-    power_usage: PowerUsage = PowerUsage()
-    gas_usage: GasUsage = GasUsage()
-    devices_set = False
-
-    last_updated_from_display: Optional[datetime] = None
-    last_updated: datetime = datetime.utcnow()
-    server_time: Optional[datetime] = None
+    thermostat: Thermostat = Thermostat()
+    electricity_meter: ElectricityMeter = ElectricityMeter()
+    gas_meter: GasMeter = GasMeter()
+    devices_discovered = False
 
     def __init__(self):
         """Initialize an empty RootedToonAPI Status class."""
-
-    def update_from_dict(self, data: Dict[str, Any]) -> Status:
-        """Update the status object with data received from the ToonAPI."""
-        if "thermostatInfo" in data:
-            self.thermostat.update_from_dict(data["thermostatInfo"])
-        # if "powerUsage" in data:
-        #     self.power_usage.update_from_dict(data["powerUsage"])
-        # if "gasUsage" in data:
-        #     self.gas_usage.update_from_dict(data["gasUsage"])
-        if "lastUpdateFromDisplay" in data:
-            self.last_updated_from_display = convert_datetime(
-                data["lastUpdateFromDisplay"]
-            )
-        if "serverTime" in data:
-            self.server_time = convert_datetime(data["serverTime"])
-        self.last_updated = datetime.utcnow()
-
-        return self
