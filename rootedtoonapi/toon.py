@@ -34,12 +34,12 @@ class Toon:
     _close_session: bool = False
 
     def __init__(
-            self,
-            host: str,
-            *,
-            port: int = 80,
-            request_timeout: int = 10,
-            session: Optional[aiohttp.client.ClientSession] = None,
+        self,
+        host: str,
+        *,
+        port: int = 80,
+        request_timeout: int = 10,
+        session: Optional[aiohttp.client.ClientSession] = None,
     ) -> None:
         """Initialize connection with the Quby ToonAPI."""
         self._session = session
@@ -48,7 +48,7 @@ class Toon:
         self.host = host
         self.port = port
 
-        self._devices = Devices()
+        self._devices = Devices(self.host)
 
     @backoff.on_exception(backoff.expo, ToonConnectionError, max_tries=3, logger=None)
     @backoff.on_exception(
@@ -59,23 +59,20 @@ class Toon:
         device: str,
         action: str,
         *,
-        query: Optional[Dict[str: Any]] = {},
+        query: Optional[Dict[str:Any]] = {},
         data: Optional[Any] = None,
         method: str = "GET",
     ) -> Any:
         """Handle a request to the Rooted Toon."""
 
-        query = {
-            "action": action,
-            **query
-        }
+        query = {"action": action, **query}
         path = TOON_API_BASE_PATH + device
         url = URL.build(
             scheme=TOON_API_SCHEME,
             host=self.host,
             port=self.port,
             path=path,
-            query=query
+            query=query,
         )
 
         headers = {
@@ -89,7 +86,11 @@ class Toon:
         try:
             with async_timeout.timeout(self.request_timeout):
                 response = await self._session.request(
-                    method, url, json=data, headers=headers, ssl=True,
+                    method,
+                    url,
+                    json=data,
+                    headers=headers,
+                    ssl=True,
                 )
         except asyncio.TimeoutError as exception:
             raise ToonConnectionTimeoutError(
@@ -107,9 +108,7 @@ class Toon:
             response.close()
 
             if response.status == 429:
-                raise ToonRateLimitError(
-                    "Rate limit error has occurred with the Toon"
-                )
+                raise ToonRateLimitError("Rate limit error has occurred with the Toon")
 
             if content_type == "application/json":
                 raise ToonError(response.status, json.loads(contents.decode("utf8")))
@@ -123,21 +122,27 @@ class Toon:
             return await response.json(content_type="text/javascript")
         return await response.text()
 
-    async def update_energy_meter(self, data: Dict[str, Any] = None) -> Optional[Devices]:
+    async def update_energy_meter(
+        self, data: Dict[str, Any] = None
+    ) -> Optional[Devices]:
         assert self._devices
         if data is None:
-            data = await self._request(
-                device=ENERGY_DEVICE,
-                action="getDevices.json"
-            )
+            data = await self._request(device=ENERGY_DEVICE, action="getDevices.json")
 
         if not self._devices.devices_discovered:
             self._devices.gas_meter.determine_device(data)
             self._devices.electricity_meter.determine_devices(data)
             self._devices.devices_discovered = True
 
-        self._devices.gas_meter.update_from_dict(data)
-        self._devices.electricity_meter.update_from_dict(data)
+        if self._devices.electricity_meter.available():
+            self._devices.electricity_meter.update_from_dict(data)
+        if self._devices.gas_meter.available():
+            self._devices.gas_meter.update_from_dict(data)
+        return self._devices
+
+    async def update_both(self) -> Optional[Devices]:
+        await self.update_climate()
+        await self.update_energy_meter()
         return self._devices
 
     async def update_climate(self, data: Dict[str, Any] = None) -> Optional[Devices]:
@@ -145,8 +150,7 @@ class Toon:
         assert self._devices
         if data is None:
             data = await self._request(
-                device=THERMOSTAT_DEVICE,
-                action="getThermostatInfo"
+                device=THERMOSTAT_DEVICE, action="getThermostatInfo"
             )
         self._devices.thermostat.update_from_dict(data)
         return self._devices
@@ -165,29 +169,22 @@ class Toon:
         await self.update_climate()
 
     async def set_active_state(
-            self, active_state: int, program_state: int = PROGRAM_STATE_OVERRIDE
+        self, active_state: int, program_state: int = PROGRAM_STATE_OVERRIDE
     ) -> None:
         """Set the active state for the thermostat"""
-        query = {
-            "state": program_state,
-            "temperatureState": active_state
-        }
+        query = {"state": program_state, "temperatureState": active_state}
 
         await self._request(
-            device=THERMOSTAT_DEVICE,
-            action="changeSchemeState",
-            query=query
+            device=THERMOSTAT_DEVICE, action="changeSchemeState", query=query
         )
         await self.update_climate()
 
     async def set_hvac_mode(self, program_state):
         """Set the hvac mode for the thermostat"""
-        query: Dict[str: str] = { "state": program_state }
+        query: Dict[str:str] = {"state": program_state}
 
         await self._request(
-            device=THERMOSTAT_DEVICE,
-            action="changeSchemeState",
-            query=query
+            device=THERMOSTAT_DEVICE, action="changeSchemeState", query=query
         )
         await self.update_climate()
 
