@@ -25,6 +25,7 @@ from .util import (
     convert_datetime,
     convert_kwh,
     convert_negative_none,
+    convert_non_zero,
     convert_temperature,
 )
 
@@ -179,10 +180,15 @@ class Boiler:
 
     pressure: Optional[float] = None
 
+    def available(self) -> bool:
+        return self.pressure is not None
+
     def update_from_dict(self, data: Dict[str, Any]) -> None:
         """Update this GasUsage object with data from a dictionary."""
 
-        self.pressure = process_data(data, "boilerPressure", self.pressure, float)
+        self.pressure = process_data(
+            data, "boilerPressure", self.pressure, convert_non_zero
+        )
 
 
 @dataclass

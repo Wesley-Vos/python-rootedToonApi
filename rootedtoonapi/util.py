@@ -50,6 +50,11 @@ def convert_negative_none(value: int) -> Optional[int]:
     return None if int(value) < 0 else int(value)
 
 
+def convert_non_zero(value: float) -> Optional[float]:
+    """Convert a zero float value from the ToonAPI to a NoneType"""
+    return None if int(value) == 0 else float(value)
+
+
 def convert_m3(value: int) -> Optional[float]:
     """Convert a value from the ToonAPI to a M3 value."""
     if value is None:
