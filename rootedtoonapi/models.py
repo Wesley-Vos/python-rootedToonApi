@@ -174,6 +174,18 @@ class Thermostat:
 
 
 @dataclass
+class Boiler:
+    """Object holding Boiler information"""
+
+    pressure: Optional[float] = None
+
+    def update_from_dict(self, data: Dict[str, Any]) -> None:
+        """Update this GasUsage object with data from a dictionary."""
+
+        self.pressure = process_data(data, "boilerPressure", self.pressure, float)
+
+
+@dataclass
 class ElectricityMeter:
     """Object holding Toon power usage information."""
 
@@ -283,18 +295,19 @@ class GasMeter:
 class Devices:
     """Object holding all status information for this ToonAPI instance."""
 
-    name: str = None
-    thermostat: Thermostat
-    electricity_meter: ElectricityMeter
-    gas_meter: GasMeter
     devices_discovered = False
 
-    def __init__(self, name):
+    boiler: Boiler
+    electricity_meter: ElectricityMeter
+    gas_meter: GasMeter
+    thermostat: Thermostat
+
+    def __init__(self):
         """Initialize an empty RootedToonAPI Status class."""
-        self.name = name
-        self.thermostat = Thermostat()
+        self.boiler = Boiler()
         self.electricity_meter = ElectricityMeter()
         self.gas_meter = GasMeter()
+        self.thermostat = Thermostat()
 
     @property
     def has_meter_adapter(self):

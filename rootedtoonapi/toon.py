@@ -12,6 +12,7 @@ import backoff
 from yarl import URL
 
 from .const import (
+    BOILER_DEVICE,
     ENERGY_DEVICE,
     PROGRAM_STATE_OVERRIDE,
     THERMOSTAT_DEVICE,
@@ -48,7 +49,7 @@ class Toon:
         self.host = host
         self.port = port
 
-        self._devices = Devices(self.host)
+        self._devices = Devices()
 
     @backoff.on_exception(backoff.expo, ToonConnectionError, max_tries=3, logger=None)
     @backoff.on_exception(
@@ -120,6 +121,8 @@ class Toon:
 
         if "text/javascript" in content_type:
             return await response.json(content_type="text/javascript")
+        if "text/plain" in content_type:
+            return await response.json(content_type="text/plain")
         return await response.text()
 
     async def update_energy_meter(
@@ -140,9 +143,18 @@ class Toon:
             self._devices.gas_meter.update_from_dict(data)
         return self._devices
 
-    async def update_both(self) -> Optional[Devices]:
+    async def update_boiler(self, data: Dict[str, Any] = None) -> Optional[Devices]:
+        assert self._devices
+        if data is None:
+            data = await self._request(device=BOILER_DEVICE, action="")
+
+        self._devices.boiler.update_from_dict(data)
+        return self._devices
+
+    async def update(self) -> Optional[Devices]:
         await self.update_climate()
         await self.update_energy_meter()
+        await self.update_boiler()
         return self._devices
 
     async def update_climate(self, data: Dict[str, Any] = None) -> Optional[Devices]:

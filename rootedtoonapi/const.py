@@ -13,6 +13,8 @@ BURNER_STATE_ON = 1
 BURNER_STATE_PREHEATING = 3
 BURNER_STATE_TAP_WATER = 2
 
+BOILER_DEVICE = "boilerstatus/boilervalues.txt"
+
 ENERGY_DEVICE = "hdrv_zwave"
 
 DEVICES = {
