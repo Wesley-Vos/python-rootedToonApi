@@ -1,6 +1,6 @@
 """Collection of small utility functions for ToonAPI."""
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Callable, Dict, Optional
 
 
 def convert_temperature(temperature: str) -> Optional[float]:
@@ -67,3 +67,22 @@ def convert_lmin(value: int) -> Optional[float]:
     if value is None:
         return None
     return round(float(value) / 60.0, 1)
+
+
+def process_data(
+    data: Dict[str, Any],
+    key: str,
+    current_value: Any,
+    conversion: Optional[Callable[[Any], Any]] = None,
+) -> Any:
+    """test."""
+    if key not in data:
+        return current_value
+
+    if data[key] is None:
+        return current_value
+
+    if conversion is None:
+        return data[key]
+
+    return conversion(data[key])
