@@ -22,7 +22,7 @@ from .const import (
 from .util import (
     convert_boolean,
     convert_cm3,
-    convert_datetime,
+    convert_datetime_from_epoch,
     convert_kwh,
     convert_negative_none,
     convert_non_zero,
@@ -52,7 +52,7 @@ def process_data(
 class Program:
     class Event:
         start_datetime: datetime
-        end_datetime: datetime
+        end_datetime: Optional[datetime]
         state: str
 
         STATE_REMAPPING = {
@@ -62,27 +62,38 @@ class Program:
             "Active": "Thuis",
         }
 
+        def __init__(self, start=None, state=None, end=None):
+            self.start_datetime = start
+            self.end_datetime = end
+            self.state = state
+
         def _epoch_to_dt(self, epoch):
             return datetime.fromtimestamp(int(epoch), timezone.utc)
 
-        def __init__(self, data) -> None:
+        def update_from_dict(self, data) -> Program.Event:
             self.start_datetime = self._epoch_to_dt(data["startTimeT"])
             self.end_datetime = self._epoch_to_dt(data["endTimeT"])
             self.state = self.STATE_REMAPPING[data["targetState"]]
+            return self
 
     _events = [Event]
 
     @property
     def events(self) -> list[Event]:
         """Return a sorted list of events, ascending by start datetime"""
-        return sorted(self._events, key=lambda e: e.start_datetime)
+        return self._events
 
     def __init__(self) -> None:
         self._events = []
 
+    def _create_event(self, data) -> Event:
+        event = self.Event()
+        return event.update_from_dict(data)
+
     def update_from_dict(self, data: Dict[str, Any]) -> None:
         """Update this Program object with data from a dictionary."""
-        self._events = [self.Event(e) for e in data["programs"]]
+        self._events = [self._create_event(e) for e in data["programs"]]
+        self._events.sort(key=lambda e: e.start_datetime)
 
 
 @dataclass
@@ -151,6 +162,10 @@ class Thermostat:
             return None
         return self.program_state == PROGRAM_STATE_OVERRIDE
 
+    @property
+    def next_program_state(self) -> Optional[Program.Event]:
+        return Program.Event(start=self.next_time, state=self.next_state)
+
     def update_program_from_dict(self, data: Dict[str, Any]) -> None:
         """Update the Program object with data from a dictionary."""
         if self.internal_program is None:
@@ -206,7 +221,7 @@ class Thermostat:
             data, "nextState", self.next_state, convert_negative_none
         )
         self.next_time = process_data(
-            data, "nextTime", self.next_state, convert_datetime
+            data, "nextTime", self.next_state, convert_datetime_from_epoch
         )
         self.opentherm_communication_error = process_data(
             data, "otCommError", self.opentherm_communication_error, convert_boolean

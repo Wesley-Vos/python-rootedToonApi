@@ -1,5 +1,5 @@
 """Collection of small utility functions for ToonAPI."""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 
@@ -29,6 +29,10 @@ def convert_datetime(timestamp: str) -> datetime:
     return datetime.utcfromtimestamp(int(timestamp) // 1000.0).replace(
         microsecond=int(timestamp) % 1000 * 1000
     )
+
+
+def convert_datetime_from_epoch(timestamp: str) -> datetime:
+    return datetime.fromtimestamp(int(timestamp), timezone.utc)
 
 
 def convert_kwh(value: str) -> Optional[float]:
