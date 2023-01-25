@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional
 import aiohttp
 import async_timeout
 import backoff
+import orjson
 from yarl import URL
 
 from .const import (
@@ -119,8 +120,12 @@ class Toon:
         if response.status == 204:
             return
 
-        if "text/javascript" in content_type:
-            return await response.json(content_type="text/javascript")
+        try:
+            if "text/javascript" in content_type:
+                return await response.json(content_type="text/javascript")
+        except orjson.JSONDecodeError:
+            return await response.text()
+
         if "text/plain" in content_type:
             return await response.json(content_type="text/plain")
         return await response.text()
@@ -129,6 +134,13 @@ class Toon:
         self, data: Dict[str, Any] = None
     ) -> Optional[Devices]:
         assert self._devices
+
+        if self._devices.devices_discovered and not (
+            self._devices.gas_meter.available()
+            and self._devices.electricity_meter.available()
+        ):
+            return
+
         if data is None:
             data = await self._request(device=ENERGY_DEVICE, action="getDevices.json")
 
@@ -155,6 +167,25 @@ class Toon:
         await self.update_climate()
         await self.update_energy_meter()
         await self.update_boiler()
+        await self.update_program()
+        return self._devices
+
+    async def update_program(self, data: Dict[str, Any] = None) -> Optional[Devices]:
+        assert self._devices
+        if data is None:
+            data = await self._request(device=THERMOSTAT_DEVICE, action="getWeeklyList")
+            data = (
+                data.replace("targetState", '"targetState"')
+                .replace("weekDay", '"weekDay"')
+                .replace("startTimeT", '"startTimeT"')
+                .replace("endTimeT", '"endTimeT"')
+                .replace("'", '"')
+                .replace("result", '"result"')
+                .replace("programs", '"programs"')
+            )
+        data = json.loads(data)
+
+        self._devices.thermostat.update_program_from_dict(data)
         return self._devices
 
     async def update_climate(self, data: Dict[str, Any] = None) -> Optional[Devices]:

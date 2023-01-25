@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Callable, Dict, Optional
 
 from .const import (
@@ -49,6 +49,42 @@ def process_data(
     return conversion(data[key])
 
 
+class Program:
+    class Event:
+        start_datetime: datetime
+        end_datetime: datetime
+        state: str
+
+        STATE_REMAPPING = {
+            "Away": "Weg",
+            "Sleep": "Slapen",
+            "Comfort": "Comfort",
+            "Active": "Thuis",
+        }
+
+        def _epoch_to_dt(self, epoch):
+            return datetime.fromtimestamp(int(epoch), timezone.utc)
+
+        def __init__(self, data) -> None:
+            self.start_datetime = self._epoch_to_dt(data["startTimeT"])
+            self.end_datetime = self._epoch_to_dt(data["endTimeT"])
+            self.state = self.STATE_REMAPPING[data["targetState"]]
+
+    _events = [Event]
+
+    @property
+    def events(self) -> list[Event]:
+        """Return a sorted list of events, ascending by start datetime"""
+        return sorted(self._events, key=lambda e: e.start_datetime)
+
+    def __init__(self) -> None:
+        self._events = []
+
+    def update_from_dict(self, data: Dict[str, Any]) -> None:
+        """Update this Program object with data from a dictionary."""
+        self._events = [self.Event(e) for e in data["programs"]]
+
+
 @dataclass
 class Thermostat:
     """Object holding Toon thermostat information."""
@@ -71,6 +107,7 @@ class Thermostat:
     opentherm_communication_error: Optional[bool] = None
     program_state: Optional[int] = None
     real_setpoint: Optional[float] = None
+    internal_program: Optional[Program] = None
 
     @property
     def burner(self) -> Optional[bool]:
@@ -113,6 +150,12 @@ class Thermostat:
         if self.program_state is None:
             return None
         return self.program_state == PROGRAM_STATE_OVERRIDE
+
+    def update_program_from_dict(self, data: Dict[str, Any]) -> None:
+        """Update the Program object with data from a dictionary."""
+        if self.internal_program is None:
+            self.internal_program = Program()
+        self.internal_program.update_from_dict(data)
 
     def update_from_dict(self, data: Dict[str, Any]) -> None:
         """Update this ThermostatInfo object with data from a dictionary."""
