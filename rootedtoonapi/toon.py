@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import socket
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 import aiohttp
@@ -158,7 +159,14 @@ class Toon:
     async def update_boiler(self, data: Dict[str, Any] = None) -> Optional[Devices]:
         assert self._devices
         if data is None:
-            data = await self._request(device=BOILER_DEVICE, action="")
+            query = {
+                "loggerName": "thermstat_boilerChPressure",
+                "rra": "30days",
+                "readableTime": 1,
+                "nullForNaN": 1,
+                "from": int(datetime.now().replace(second=0).timestamp())
+            }
+            data = await self._request(device=BOILER_DEVICE, action="getRrdData", query=query)
 
         self._devices.boiler.update_from_dict(data)
         return self._devices

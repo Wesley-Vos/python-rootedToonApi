@@ -244,9 +244,9 @@ class Boiler:
     def update_from_dict(self, data: Dict[str, Any]) -> None:
         """Update this GasUsage object with data from a dictionary."""
 
-        self.pressure = process_data(
-            data, "boilerPressure", self.pressure, convert_non_zero
-        )
+        pressure_value = list(data.values())[0]
+        if pressure_value is not None:
+            self.pressure = convert_non_zero(pressure_value)
 
 
 @dataclass
