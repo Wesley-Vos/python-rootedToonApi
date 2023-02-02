@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import socket
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
 import aiohttp
@@ -164,7 +164,7 @@ class Toon:
                 "rra": "30days",
                 "readableTime": 1,
                 "nullForNaN": 1,
-                "from": int(datetime.now().replace(second=0).timestamp())
+                "from": int((datetime.now().replace(second=0) - timedelta(minutes=1)).timestamp())
             }
             data = await self._request(device=BOILER_DEVICE, action="getRrdData", query=query)
 
