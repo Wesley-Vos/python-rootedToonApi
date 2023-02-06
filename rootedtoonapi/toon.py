@@ -136,24 +136,14 @@ class Toon:
     ) -> Optional[Devices]:
         assert self._devices
 
-        if self._devices.devices_discovered and not (
-            self._devices.gas_meter.available()
-            and self._devices.electricity_meter.available()
-        ):
+        if self._devices.p1_meter.skip:
             return
 
         if data is None:
             data = await self._request(device=ENERGY_DEVICE, action="getDevices.json")
 
-        if not self._devices.devices_discovered:
-            self._devices.gas_meter.determine_device(data)
-            self._devices.electricity_meter.determine_devices(data)
-            self._devices.devices_discovered = True
-
-        if self._devices.electricity_meter.available():
-            self._devices.electricity_meter.update_from_dict(data)
-        if self._devices.gas_meter.available():
-            self._devices.gas_meter.update_from_dict(data)
+        if not self._devices.p1_meter.skip:
+            self._devices.p1_meter.update_from_dict(data)
         return self._devices
 
     async def update_boiler(self, data: Dict[str, Any] = None) -> Optional[Devices]:

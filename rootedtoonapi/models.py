@@ -280,6 +280,7 @@ class ElectricityMeter:
                     if device[self._key_quantity] != "NaN":
                         self._device_ids[device_name] = device_id
 
+    @property
     def available(self) -> bool:
         return len(self._device_ids) > 0
 
@@ -345,6 +346,7 @@ class GasMeter:
                 if device[self._key_quantity] != "NaN":
                     self._device_id = device_id
 
+    @property
     def available(self) -> bool:
         return self._device_id is not None
 
@@ -356,23 +358,54 @@ class GasMeter:
         self.total = process_data(data, self._key_quantity, self.total, convert_cm3)
 
 
+
+
+
+class P1Meter:
+    devices_discovered = False
+
+    electricity_meter: ElectricityMeter
+    gas_meter: GasMeter
+
+    def __init__(self):
+        """Initialize an empty RootedToonAPI Status class."""
+        self.electricity_meter = ElectricityMeter()
+        self.gas_meter = GasMeter()
+
+    def determine_devices(self, data: Dict[str, Any]) -> None:
+        self.electricity_meter.determine_devices(data)
+        self.gas_meter.determine_device(data)
+        self.devices_discovered = True
+
+    def update_from_dict(self, data: Dict[str, Any]) -> None:
+        if not self.devices_discovered:
+            self.determine_devices(data)
+
+        if self.electricity_meter.available:
+            self.electricity_meter.update_from_dict(data)
+        if self.gas_meter.available:
+            self.gas_meter.update_from_dict(data)
+
+    @property
+    def skip(self) -> bool:
+        return self.devices_discovered and not any(
+            (self.electricity_meter.available, self.gas_meter.available)
+        )
+
+
 class Devices:
     """Object holding all status information for this ToonAPI instance."""
 
-    devices_discovered = False
-
     boiler: Boiler
-    electricity_meter: ElectricityMeter
-    gas_meter: GasMeter
+    p1_meter: P1Meter
     thermostat: Thermostat
 
     def __init__(self):
         """Initialize an empty RootedToonAPI Status class."""
         self.boiler = Boiler()
-        self.electricity_meter = ElectricityMeter()
-        self.gas_meter = GasMeter()
+        self.p1_meter = P1Meter()
         self.thermostat = Thermostat()
 
     @property
     def has_meter_adapter(self):
-        return self.electricity_meter.available() and self.gas_meter.available()
+        return not self.p1_meter.skip
