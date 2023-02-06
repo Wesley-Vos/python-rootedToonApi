@@ -358,7 +358,60 @@ class GasMeter:
         self.total = process_data(data, self._key_quantity, self.total, convert_cm3)
 
 
+@dataclass
+class SmartPlug:
+    """Object holding Toon Smart Plug information."""
 
+    _key_quantity = KEY_QUANTITY_ELECTRICITY
+    _key_flow = KEY_FLOW_ELECTRICITY
+
+    device_id: Optional[str] = None
+    name: Optional[str] = None
+
+    power: Optional[float] = None
+    total: Optional[float] = None
+
+    def update_from_dict(self, data: Dict[str, Any]) -> None:
+        """Update this GasUsage object with data from a dictionary."""
+        data = data.get(self.device_id)
+        self.power = process_data(data, self._key_flow, self.power, float)
+        self.total = process_data(data, self._key_quantity, self.total, convert_kwh)
+
+
+@dataclass
+class SmartPlugs:
+    """Object holding Toon Smart Plugs information."""
+
+    devices_discovered = False
+    devices: Optional[list[SmartPlug]] = None
+
+    def determine_devices(self, data: Dict[str, Any]):
+        self.devices = []
+        for device_id, device in data.items():
+            dev_id = device_id.split("dev_")[1]
+            if not dev_id.startswith("3") and not dev_id.startswith("settings_device"):
+                smart_plug = SmartPlug(
+                    device_id=device_id, name=device.get("DeviceName")
+                )
+                self.devices.append(smart_plug)
+        self.devices_discovered = True
+
+    @property
+    def available(self) -> bool:
+        return len(self.devices) > 0
+
+    @property
+    def skip(self) -> bool:
+        return self.devices_discovered and not self.available
+
+    def update_from_dict(self, data: Dict[str, Any]) -> None:
+        if not self.devices_discovered:
+            self.determine_devices(data)
+
+        if self.available:
+            """Update this SmartPlugs object with data from a dictionary."""
+            for device in self.devices:
+                device.update_from_dict(data)
 
 
 class P1Meter:
@@ -399,12 +452,14 @@ class Devices:
     boiler: Boiler
     p1_meter: P1Meter
     thermostat: Thermostat
+    smart_plugs: SmartPlugs
 
     def __init__(self):
         """Initialize an empty RootedToonAPI Status class."""
         self.boiler = Boiler()
         self.p1_meter = P1Meter()
         self.thermostat = Thermostat()
+        self.smart_plugs = SmartPlugs()
 
     @property
     def has_meter_adapter(self):

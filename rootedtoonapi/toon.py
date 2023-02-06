@@ -136,7 +136,7 @@ class Toon:
     ) -> Optional[Devices]:
         assert self._devices
 
-        if self._devices.p1_meter.skip:
+        if self._devices.p1_meter.skip and self._devices.smart_plugs.skip:
             return
 
         if data is None:
@@ -144,6 +144,8 @@ class Toon:
 
         if not self._devices.p1_meter.skip:
             self._devices.p1_meter.update_from_dict(data)
+        if not self._devices.smart_plugs.skip:
+            self._devices.smart_plugs.update_from_dict(data)
         return self._devices
 
     async def update_boiler(self, data: Dict[str, Any] = None) -> Optional[Devices]:
