@@ -156,9 +156,15 @@ class Toon:
                 "rra": "30days",
                 "readableTime": 1,
                 "nullForNaN": 1,
-                "from": int((datetime.now().replace(second=0) - timedelta(minutes=1)).timestamp())
+                "from": int(
+                    (
+                        datetime.now().replace(second=0) - timedelta(minutes=1)
+                    ).timestamp()
+                ),
             }
-            data = await self._request(device=BOILER_DEVICE, action="getRrdData", query=query)
+            data = await self._request(
+                device=BOILER_DEVICE, action="getRrdData", query=query
+            )
 
         self._devices.boiler.update_from_dict(data)
         return self._devices
