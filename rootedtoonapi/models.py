@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, Optional
 
+import math
+
 from .const import (
     ACTIVE_STATE_HOLIDAY,
     BURNER_STATE_ON,
@@ -41,6 +43,9 @@ def process_data(
         return current_value
 
     if data[key] is None:
+        return current_value
+
+    if math.isnan(float(data[key])):
         return current_value
 
     if conversion is None:
@@ -294,18 +299,27 @@ class ElectricityMeter:
 
     @property
     def electricity_return(self) -> Optional[float]:
-        if self.electricity_return_low is None or self.electricity_return_high is None:
-            return None
-        return self.electricity_return_low + self.electricity_return_high
+        low = 0 if self.electricity_return_low is None else self.electricity_return_low
+        high = 0 if self.electricity_return_high is None else self.electricity_return_high
+        return low + high
 
     @property
     def electricity_delivery(self) -> Optional[float]:
-        if (
-            self.electricity_delivery_low is None
-            or self.electricity_delivery_high is None
-        ):
+        low = 0 if self.electricity_delivery_low is None else self.electricity_delivery_low
+        high = 0 if self.electricity_delivery_high is None else self.electricity_delivery_high
+        return low + high
+
+    @property
+    def electricity_returned(self) -> Optional[float]:
+        if self.electricity_returned_low is None or self.electricity_returned_high is None:
             return None
-        return self.electricity_delivery_low + self.electricity_delivery_high
+        return self.electricity_returned_low + self.electricity_returned_high
+
+    @property
+    def electricity_delivered(self) -> Optional[float]:
+        if self.electricity_delivered_low is None or self.electricity_delivered_high is None:
+            return None
+        return self.electricity_delivered_low + self.electricity_delivered_high
 
     def update_from_dict(self, data: Dict[str, Any]) -> None:
         """Update this PowerUsage object with data from a dictionary."""
@@ -317,6 +331,7 @@ class ElectricityMeter:
                 getattr(self, device_name),
                 lambda x: int(float(x)),
             )
+            value = 0 if value is None else value   # if the power is None, it is zero
             setattr(self, device_name, value)
 
             name = device_name.replace("delivery", "delivered").replace(
